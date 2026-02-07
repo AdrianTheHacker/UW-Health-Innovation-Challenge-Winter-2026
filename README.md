@@ -1,1 +1,0 @@
-# UW-Health-Innovation-Challenge-Winter-2026
