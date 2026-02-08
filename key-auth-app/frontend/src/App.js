@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import "./App.css";
 import { io } from "socket.io-client";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
  const HARD_CODED_VALUES = {
     heartRateRange: "Comfort: 60-100, Monitor: 100-120, Stop exercise: >120",
@@ -79,6 +81,31 @@ function App() {
     setError("");
   };
 
+  const exportPatientPDF = () => {
+  if (!user || user.role !== "patient") return;
+
+  const doc = new jsPDF();
+  doc.setFontSize(16);
+  doc.text(`Patient Report: ${user.name}`, 14, 20);
+  doc.setFontSize(12);
+  doc.text(`Age: ${user.age}, Sex: ${user.sex}`, 14, 28);
+
+  const tableColumn = ["#", "Timestamp", "Heart Rate"];
+  const tableRows = user.heart_rates
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+    .map((row, index) => [index + 1, row.timestamp, row.heart_rate]);
+
+  
+  autoTable(doc, {
+    head: [tableColumn],
+    body: tableRows,
+    startY: 36,
+  });
+
+  doc.save(`${user.name}_heart_rate_report.pdf`);
+};
+
+
 if (!user) {
   return (
     <div className="login-container">
@@ -96,46 +123,57 @@ if (!user) {
   );
 }
 
-
-if (user.role === "patient") {
-  // Sort heart rates by timestamp ascending
-  const sortedHeartRates = [...user.heart_rates].sort(
-    (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
-  );
-
+// PatientDashboard.jsx
+if (user && user.role === "patient") {
   return (
-    <div className="patient-container">
-      <h1 style={{ textAlign: "center", marginBottom: "20px" }}>
-        Welcome {user.name}
-      </h1>
-      <div className="patient-info">
-        <span>Age: {user.age}</span>
-        <span>Sex: {user.sex}</span>
+    <div className="dashboard-container">
+
+      {/* Profile Card */}
+      <div className="card profile-card">
+        <h1>👋 Welcome, {user.name}</h1>
+        <p>
+          Age: <b>{user.age}</b> • Sex: <b>{user.sex}</b>
+        </p>
       </div>
-      <h3 style={{ textAlign: "center", marginBottom: "10px" }}>
-        Heart Rate Records
-      </h3>
-      <table className="patient-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Timestamp</th>
-            <th>Heart Rate</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sortedHeartRates.map((r, i) => (
-            <tr key={i}>
-              <td>{i + 1}</td>
-              <td>{r.timestamp}</td>
-              <td>{r.heart_rate}</td>
+
+      {/* Heart Rate Records */}
+      <div className="card">
+        <h3>❤️ Heart Rate Records</h3>
+
+        <table className="heart-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Timestamp</th>
+              <th>Heart Rate (BPM)</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {user.heart_rates
+              .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+              .map((r, i) => (
+                <tr key={i}>
+                  <td>{i + 1}</td>
+                  <td>{r.timestamp}</td>
+                  <td className={r.heart_rate > 120 ? "bpm-high" : "bpm-normal"}>
+                    {r.heart_rate}
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+
+        <div className="export-btn-container">
+          <button onClick={exportPatientPDF} className="export-btn">
+            📄 Export PDF
+          </button>
+        </div>
+      </div>
+
     </div>
   );
 }
+
 
 
   if (user.role === "doctor") {
