@@ -41,6 +41,8 @@ void hardware_thread() {
 }
 
 void telemetry_thread() {
+  // Unfinished
+
   int latestBPM = 0;
 
   // Always print the header so you know the task is running
